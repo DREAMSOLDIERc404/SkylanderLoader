@@ -39,8 +39,32 @@
 
 clear
 
+# Definizione dei colori
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+MAGENTA='\033[0;35m'
+CYAN='\033[0;36m'
+NC='\033[0m' # No Color
+
+# Titolo ASCII art
+echo -e "${CYAN}"
+echo "  _____ __  __    _    _           _               _____  _           _     _ "
+echo " / ____|  \/  |  | |  | |         | |             |  __ \| |         | |   | |"
+echo "| (___ | \  / |  | |  | | __ _ ___| |__   ___ _ __| |  | | | __ _  __| | __| |"
+echo " \___ \| |\/| |  | |  | |/ _\` / __| '_ \ / _ \ '__| |  | | |/ _\` |/ _\` |/ _\` |"
+echo " ____) | |  | |  | |__| | (_| \__ \ | | |  __/ |  | |__| | | (_| | (_| | (_| |"
+echo "|_____/|_|  |_|   \____/ \__,_|___/_| |_|\___|_|  |_____/|_|\__,_|\__,_|\__,_|"
+echo -e "${NC}"
+echo -e "${YELLOW}================================================================================${NC}"
+echo -e "${GREEN}                   Skylander NFC Manager - v2.0${NC}"
+echo -e "${YELLOW}================================================================================${NC}"
+echo
+
 exitBatch() {
-	read -p "Programma terminato premi un tasto per uscire..."
+	echo -e "${YELLOW}Premi INVIO per uscire...${NC}"
+	read
 	exit
 }
 
@@ -48,55 +72,49 @@ PM3_PATH=""
 
 termuxChecker=$(echo $PREFIX | grep -o "com.termux")
 
-if [ ! -n termuxChecker ];then
+if [[ $termuxChecker == "com.termux" ]];then
 	PM3_PATH="./proxmark3/pm3 -p tcp:localhost:1234"
 else
 	PM3_PATH="./proxmark3/pm3"
 fi
 
-echo "Ricerca scanner"
+
+echo -e "${BLUE}Ricerca scanner...${NC}"
 $PM3_PATH -c "hf" > /dev/null
 
 if [[ $? != 0 ]]; then 
-	echo "Scanner non trovato"
+	echo -e "${RED}Scanner non trovato!${NC}"
+	echo -e "${YELLOW}Collegare lo scanner e riprovare${NC}"
 	exitBatch
 else
-	echo "Scanner inizializzato!"
+	echo -e "${GREEN}Scanner inizializzato correttamente!${NC}"
 fi
 
 uid=0
 
 while : ; do
-	echo "Scan in corso"
+	echo -e "${BLUE}Scan in corso...${NC}"
 	uid=$($PM3_PATH -c "hf mf cgetblk --blk 0")
 	if [[ $? != 0 ]]; then 
-		echo "Tag non trovato o non valido"
+		echo -e "${RED}Tag non trovato o non valido!${NC}"
 		while true; do
-			read -p "Vuoi riprovare?(y/n): " yn
+			read -p "Vuoi riprovare? (y/n): " yn
 			case $yn in
 				[Yy]* ) break;;
 				[Nn]* ) exitBatch;;
-				* ) echo "Please answer yes or no.";;
+				* ) echo -e "${RED}Rispondere con y o n${NC}";;
 			esac
 		done
 	else
-		echo "Tag trovato!"
+		echo -e "${GREEN}Tag trovato!${NC}"
 		break
 	fi
 done
 
-
-# Estrae la parte dopo il primo pipe '|'
-# Se la stringa è già 'uid', non c'è bisogno di 'echo "$uid" |', puoi passarla direttamente.
-# Tuttavia, per chiarezza e generalità, useremo 'echo' come nell'esempio precedente.
+# Estrazione UID
 bytes_raw=$(echo "$uid" | awk -F'|' '{print $2}')
-
-# Prende i primi 4 "blocchi" di byte e rimuove tutti gli spazi, sovrascrivendo la variabile 'uid'
 uid=$(echo "$bytes_raw" | awk '{print $1$2$3$4}' | tr -d ' ')
-
 uid=$(echo "$uid" | grep -oP '[0-9a-fA-F]{8}' | tr '[:upper:]' '[:lower:]')
-
-
 
 skylanderNAME=""
 skylanderNAME=$(find "./skylandersDataBase" -type f -not -path "*/Card Printouts/*" \
@@ -106,82 +124,86 @@ head -n 1)
 
 tagIsValid=true
 
-# Se il nome è stato trovato con un percorso, isoliamo solo il nome del file senza l'estensione
 if [ -n "$skylanderNAME" ]; then
     skylanderNAME=$(basename "${skylanderNAME}" .bin)
 fi
 
 if [ -n "$skylanderNAME" ]; then
-    echo "Skylander rilevato: ${skylanderNAME}"
+    echo -e "${CYAN}Skylander rilevato: ${MAGENTA}${skylanderNAME}${NC}"
 else
-    echo "Nessun Skylander trovato con UID '${uid}'."
+    echo -e "${RED}Nessun Skylander trovato con UID '${uid}'!${NC}"
 	tagIsValid=false
 fi
 
 if [[ "$tagIsValid" == true ]]; then
-	# Controlla se il file esiste e se sì lo cancella
 	if [ -f "./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}.bin" ]; then
 		rm "./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}.bin"
-		# Controlla se l'eliminazione è avvenuta con successo
 		if [[ $? != 0 ]]; then
-			echo "Errore durante l'eliminazione del vecchio backup"
+			echo -e "${RED}Errore durante l'eliminazione del vecchio backup!${NC}"
 			exitBatch
 		fi
 	fi
 
-	echo "Lettura contenuto tag!"
+	echo -e "${BLUE}Lettura contenuto tag...${NC}"
 	$PM3_PATH -c "hf mf csave -f \"./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}.bin\"" > /dev/null
 
 	if [[ $? != 0 ]]; then
-		echo "Backup in YOURSKYLANDERS fallito!"
+		echo -e "${RED}Backup in YOURSKYLANDERS fallito!${NC}"
 		exitBatch
 	else
-		echo "Aggiornamento del tuo Skylander Eseguito"
+		echo -e "${GREEN}Aggiornamento del tuo Skylander completato!${NC}"
 	fi
 
 	rm -f "./skylandersDataBase/7)_YOUR_SKYLANDERS/"*.json
 else
-	echo "Backup skippato"
+	echo -e "${YELLOW}Backup skippato${NC}"
 fi
 
-### FACCIAMO SCEGLIERE UN NUOVO SKYLANDER ###
-echo "SELEZIONE NUOVO SKYLANDER..."
+### SELEZIONE NUOVO SKYLANDER ###
+echo -e "${CYAN}"
+echo "  _____ _____ __  __ ______ _____   _____ "
+echo " / ____/ ____|  \/  |  ____|  __ \ / ____|"
+echo "| (___| (___ | \  / | |__  | |__) | |  __ "
+echo " \___ \\___ \| |\/| |  __| |  _  /| | |_ |"
+echo " ____) |___) | |  | | |____| | \ \| |__| |"
+echo "|_____/_____/|_|  |_|______|_|  \_\\_____|"
+echo -e "${NC}"
+echo -e "${BLUE}SELEZIONE NUOVO SKYLANDER...${NC}"
 sleep 2.5
-#Togliamo ogni possibile errore di selezione andando a eliminare la cartella che contiene il nuovo sklndr selezionato
+
 rm -rf ./tmp 
-# Esegui il navigator in modalità interattiva
 /bin/bash ./skylander_navigator
 
-# Verifica se è stata fatta una selezione
 if [ -f "./tmp/skylander_selection.txt" ]; then
     selected_path=$(cat "./tmp/skylander_selection.txt")
 	filename=$(basename "$selected_path")
-    echo "Skylander selezionato: $filename"
+    echo -e "${CYAN}Skylander selezionato: ${MAGENTA}$filename${NC}"
     if [ ! -f "./skylandersDataBase/7)_YOUR_SKYLANDERS/$filename" ]; then
-		echo "SkyLander CHE NON HAI MAI GIOCATO! LO AGGIUNGO ALLA TUA LIBRERRIA!"
+		echo -e "${GREEN}Skylander nuovo! Aggiungo alla tua libreria...${NC}"
 		cp "./skylandersDataBase/${selected_path}" "./skylandersDataBase/7)_YOUR_SKYLANDERS/"
 	else 
-		echo "Questo skyLander è già in libreria, lo carico da lì XD"
+		echo -e "${CYAN}Skylander già presente in libreria${NC}"
 	fi
 else
-    echo "Nessun Skylander selezionato."
+    echo -e "${RED}Nessun Skylander selezionato!${NC}"
 	exitBatch
 fi
 rm -rf ./tmp
 
-echo "Caricando lo skylander sul TAG"
+echo -e "${BLUE}Caricamento skylander sul TAG...${NC}"
 $PM3_PATH -c "hf mf cload -f \"./skylandersDataBase/7)_YOUR_SKYLANDERS/${filename}\"" > /dev/null
 
 if [[ $? == 0 ]]; then
-	echo "Scrittura avvenuta con successo!"
-	echo "___TERMINE PROGRAMMA___"
+	echo -e "${GREEN}Scrittura avvenuta con successo!${NC}"
+	echo -e "${CYAN}___ TERMINE PROGRAMMA ___${NC}"
 	exitBatch
 else
-	echo "SCRITTURA FALLITA! ERRORE!"
-	echo "Per evitare bug cambiamo l'uid del tag!"
+	echo -e "${RED}SCRITTURA FALLITA!${NC}"
+	echo -e "${YELLOW}Per evitare bug cambiamo l'uid del tag...${NC}"
 	$PM3_PATH -c " hf mf csetuid -u 01020300"
 	exitBatch
 fi
 
 exitBatch
+
 
