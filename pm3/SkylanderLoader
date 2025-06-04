@@ -37,7 +37,12 @@
 #    fi
 #}
 
+PM3_PATH=""
+UART_PORT=""
+
+
 clear
+
 
 # Definizione dei colori
 RED='\033[0;31m'
@@ -67,14 +72,27 @@ exitBatch() {
 	exit
 }
 
-PM3_PATH=""
+findUSBport() {
+	UART_PORT=$(./proxmark3/pm3 -c "hf" | grep -oP '\[\+\] Using UART port \K\w+')
+}
 
 termuxChecker=$(echo $PREFIX | grep -o "com.termux")
 
+
 if [[ $termuxChecker == "com.termux" ]];then
+	echo -e "${BLUE}Porta TCP localhost:1234 selezionata${NC}"
 	PM3_PATH="./proxmark3/pm3 -p tcp:localhost:1234"
 else
-	PM3_PATH="./proxmark3/pm3"
+	echo -e "${BLUE}Ricerca porta UART...${NC}"
+	findUSBport
+	if [ ! -n $UART_PORT ]; then
+		echo "Porta UART non trovata!"
+		exitBatch
+	else
+		echo -e "Porta uart: ${GREEN}${UART_PORT}${NC}"
+		PM3_PATH="./proxmark3/pm3 -p $UART_PORT"
+	fi
+	
 fi
 
 
@@ -135,25 +153,52 @@ else
 fi
 
 if [[ "$tagIsValid" == true ]]; then
-	if [ -f "./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}.bin" ]; then
-		rm "./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}.bin"
+		
+	if [ -f "./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}.bin" ]; then 
+	
+		mv "./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}.bin" "./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}2.bin"
+		
+		echo -e "${BLUE}Lettura contenuto tag...${NC}"
+	
+		$PM3_PATH -c "hf mf csave -f \"./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}.bin\"" > /dev/null
+
 		if [[ $? != 0 ]]; then
-			echo -e "${RED}Errore durante l'eliminazione del vecchio backup!${NC}"
+			echo -e "${RED}Backup in YOURSKYLANDERS fallito!${NC}"
+			mv "./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}2.bin" "./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}.bin"
+			if [[ $? != 0 ]]; then
+				echo -e "${RED}\tIL VECCHIO FILE DI BACKUP E' STATO DANNEGGIATO HAI PERSO TUTTI I TUOI PROGRESSI!${NC}"
+			else
+				echo -e "${YELLOW}VECCHIO FILE RIPRISTINATO CORRETTAMENTE${NC}"
+			fi
 			exitBatch
+		else
+			echo -e "${GREEN}Aggiornamento del tuo Skylander completato!${NC}"
+			if [ -f "./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}2.bin" ]; then
+				rm "./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}2.bin"
+				if [[ $? != 0 ]]; then
+					echo -e "${RED}Errore durante l'eliminazione del vecchio backup!${NC}"
+				fi
+			else
+				echo -e "${RED}IL FILE DI SICUREZZA DEL BACKUP NON E' STATO CREATO!\n\t${YELLOW}!RISOLVERE IMMEDIATAMENTE!\nADESSO NON E' SUCCESSO NULLA DI GRAVE MA CI SARANNO DEI BUG IN FUTURO${NC}"
+			fi
+		fi
+		
+	else
+		
+		echo -e "${BLUE}Lettura contenuto tag...${NC}"
+	
+		$PM3_PATH -c "hf mf csave -f \"./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}.bin\"" > /dev/null
+
+		if [[ $? != 0 ]]; then
+			echo -e "${RED}Backup in YOURSKYLANDERS fallito!${NC}"
+			exitBatch
+		else
+			echo -e "${GREEN}Aggiornamento del tuo Skylander completato!${NC}"
 		fi
 	fi
 
-	echo -e "${BLUE}Lettura contenuto tag...${NC}"
-	$PM3_PATH -c "hf mf csave -f \"./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}.bin\"" > /dev/null
-
-	if [[ $? != 0 ]]; then
-		echo -e "${RED}Backup in YOURSKYLANDERS fallito!${NC}"
-		exitBatch
-	else
-		echo -e "${GREEN}Aggiornamento del tuo Skylander completato!${NC}"
-	fi
-
-	rm -f "./skylandersDataBase/7)_YOUR_SKYLANDERS/"*.json
+	rm "./skylandersDataBase/7)_YOUR_SKYLANDERS/"*.json
+	
 else
 	echo -e "${YELLOW}Backup skippato${NC}"
 fi
