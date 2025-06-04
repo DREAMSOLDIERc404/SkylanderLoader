@@ -1,0 +1,25 @@
+check_install () { 
+	echo "Installing: $1"
+	pacman -Q $1 &> /dev/null
+	if [ $? == 1 ] || [ -n "$PSREINSTALL" ]; then
+		pacman --noconfirm --overwrite='*' -S $1
+	fi
+}
+
+setup_proxspace ()
+{
+  if [ "$MSYSTEM" == "MINGW64" ]; then	  
+	for pkg in $(grep "^[^#;]" /setup/packages.txt); do
+		check_install $pkg
+	done
+	
+	python3 -m pip install ansicolors sslcrypto
+	
+	yes | pacman -Sc
+	
+	echo "export PSINSTALLDATE=\"$(date '+%Y-%m-%d %H:%M:%S')\"" > /setup/installed
+	echo "export PSINSTALLPATH=\"$OLDPWD\"" >> /setup/installed
+	
+  fi
+}
+setup_proxspace

@@ -1,0 +1,173 @@
+#!/bin/bash
+
+###DA AGGIUNGERE PROSSIMAMENTE###
+# Controlla che il titolo matchi l'uid effettivo
+## Funzione per verificare la corrispondenza dell'UID
+#verify_uid() {
+#    local file_path="$1"
+#    local file_name=$(basename "$file_path")
+#    
+#    # Estrai UID dal nome del file (parte tra [])
+#    local uid_from_name
+#    if [[ "$file_name" =~ \[([a-fA-F0-9]{8})\] ]]; then
+#        uid_from_name=$(echo "${BASH_REMATCH[1]}" | tr '[:upper:]' '[:lower:]')
+#    else
+#        echo "ERRORE: Formato nome file non valido - $file_name"
+#        return 1
+#    fi
+#    
+#    # Leggi i primi 4 byte del file
+#    local first_bytes
+#    if ! first_bytes=$(head -c 4 "$file_path" 2>/dev/null); then
+#        echo "ERRORE: Impossibile leggere il file - $file_path"
+#        return 1
+#    fi
+#    
+#    # Converti i byte in esadecimale
+#    local uid_from_file
+#    uid_from_file=$(printf '%s' "$first_bytes" | hexdump -ve '/1 "%02x"')
+#    
+#    # Confronta gli UID
+#    if [[ "$uid_from_name" == "$uid_from_file" ]]; then
+#        echo "OK: $file_name - UID corrisponde [$uid_from_name]"
+#        return 0
+#    else
+#        echo "ERRORE: $file_name - UID non corrisponde! Nome: [$uid_from_name] File: [$uid_from_file]"
+#        return 1
+#    fi
+#}
+
+
+clear
+
+echo "Ricerca scanner"
+./proxmark3/pm3 -c "hf" > /dev/null
+
+if [[ $? != 0 ]]; then 
+	echo "Scanner non trovato"
+	exit
+else
+	echo "Scanner inizializzato!"
+fi
+
+uid=0
+
+while : ; do
+	echo "Scan in corso"
+	uid=$(./proxmark3/pm3 -c "hf mf cgetblk --blk 0")
+	if [[ $? != 0 ]]; then 
+		echo "Tag non trovato o non valido"
+		while true; do
+			read -p "Vuoi riprovare?(y/n): " yn
+			case $yn in
+				[Yy]* ) break;;
+				[Nn]* ) exit;;
+				* ) echo "Please answer yes or no.";;
+			esac
+		done
+	else
+		echo "Tag trovato!"
+		break
+	fi
+done
+
+
+# Estrae la parte dopo il primo pipe '|'
+# Se la stringa è già 'uid', non c'è bisogno di 'echo "$uid" |', puoi passarla direttamente.
+# Tuttavia, per chiarezza e generalità, useremo 'echo' come nell'esempio precedente.
+bytes_raw=$(echo "$uid" | awk -F'|' '{print $2}')
+
+# Prende i primi 4 "blocchi" di byte e rimuove tutti gli spazi, sovrascrivendo la variabile 'uid'
+uid=$(echo "$bytes_raw" | awk '{print $1$2$3$4}' | tr -d ' ')
+
+uid=$(echo "$uid" | grep -oP '[0-9a-fA-F]{8}' | tr '[:upper:]' '[:lower:]')
+
+
+
+skylanderNAME=""
+skylanderNAME=$(find "./skylandersDataBase" -type f -not -path "*/Card Printouts/*" \
+-regextype posix-egrep -regex ".*/[^/]*\\[${uid}\\].*\\.bin$" -print0 | \
+xargs -0 -r basename -s .bin | \
+head -n 1)
+
+tagIsValid=true
+
+# Se il nome è stato trovato con un percorso, isoliamo solo il nome del file senza l'estensione
+if [ -n "$skylanderNAME" ]; then
+    skylanderNAME=$(basename "${skylanderNAME}" .bin)
+fi
+
+if [ -n "$skylanderNAME" ]; then
+    echo "Skylander rilevato: ${skylanderNAME}"
+else
+    echo "Nessun Skylander trovato con UID '${uid}'."
+	tagIsValid=false
+fi
+
+if [[ "$tagIsValid" == true ]]; then
+	# Controlla se il file esiste e se sì lo cancella
+	if [ -f "./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}.bin" ]; then
+		rm "./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}.bin"
+		# Controlla se l'eliminazione è avvenuta con successo
+		if [[ $? != 0 ]]; then
+			echo "Errore durante l'eliminazione del vecchio backup"
+			exit
+		fi
+	fi
+
+	echo "Lettura contenuto tag!"
+	./proxmark3/pm3 -c "hf mf csave -f \"./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}.bin\"" > /dev/null
+
+	if [[ $? != 0 ]]; then
+		echo "Backup in YOURSKYLANDERS fallito!"
+		exit
+	else
+		echo "Aggiornamento del tuo Skylander Eseguito"
+	fi
+
+	rm "./skylandersDataBase/7)_YOUR_SKYLANDERS/"*.json
+else
+	echo "Backup skippato"
+fi
+
+### FACCIAMO SCEGLIERE UN NUOVO SKYLANDER ###
+echo "SELEZIONE NUOVO SKYLANDER..."
+sleep 2.5
+#Togliamo ogni possibile errore di selezione andando a eliminare la cartella che contiene il nuovo sklndr selezionato
+rm -rf ./tmp 
+# Esegui il navigator in modalità interattiva
+./skylander_navigator
+
+# Verifica se è stata fatta una selezione
+if [ -f "./tmp/skylander_selection.txt" ]; then
+    selected_path=$(cat "./tmp/skylander_selection.txt")
+	filename=$(basename "$selected_path")
+    echo "Skylander selezionato: $filename"
+    if [ ! -f "./skylandersDataBase/7)_YOUR_SKYLANDERS/$filename" ]; then
+		echo "SkyLander CHE NON HAI MAI GIOCATO! LO AGGIUNGO ALLA TUA LIBRERRIA!"
+		cp "./skylandersDataBase/${selected_path}" "./skylandersDataBase/7)_YOUR_SKYLANDERS/"
+	else 
+		echo "Questo skyLander è già in libreria, lo carico da lì XD"
+	fi
+else
+    echo "Nessun Skylander selezionato."
+	exit
+fi
+rm -rf ./tmp
+
+echo "Caricando lo skylander sul TAG"
+./proxmark3/pm3 -c "hf mf cload -f \"./skylandersDataBase/7)_YOUR_SKYLANDERS/${filename}\"" > /dev/null
+
+if [[ $? == 0 ]]; then
+	echo "Scrittura avvenuta con successo!"
+	echo "___TERMINE PROGRAMMA___"
+	exit
+else
+	echo "SCRITTURA FALLITA! ERRORE!"
+	echo "Per evitare bug cambiamo l'uid del tag!"
+	./proxmark3/pm3 -c " hf mf csetuid -u 01020300"
+	exit
+fi
+
+exit
+

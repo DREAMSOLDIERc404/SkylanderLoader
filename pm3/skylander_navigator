@@ -1,0 +1,128 @@
+#!/bin/bash
+# skylander_navigator
+
+# Ottieni il percorso assoluto dello script
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+base_dir="${script_dir}/skylandersDataBase"
+
+# Salva lo stato attuale dello schermo
+tput smcup
+
+# Funzione per ripristinare lo schermo
+restore_screen() {
+    clear
+    tput rmcup
+}
+
+# Assicurati di ripristinare lo schermo quando lo script termina
+trap restore_screen EXIT
+
+current_dir="$base_dir"
+history=()
+
+show_menu() {
+    # Pulisci solo l'area di lavoro mantenendo l'header
+    tput ed
+    
+    # Posiziona il cursore all'inizio dell'area di menu
+    tput cup 5 0
+    
+    echo "Cartella corrente: ${current_dir/#$base_dir\//}"
+    echo "------------------------------------------------------"
+    
+    # Array per le opzioni
+    local options=()
+    local item_count=0
+    
+    # Aggiungi cartelle e file
+    while IFS= read -r -d $'\0' item; do
+        options+=("$item")
+        item_count=$((item_count + 1))
+        if [[ -d "$item" ]]; then
+            printf " [%2d] 📁 %s\n" "$item_count" "$(basename "$item")"
+        else
+            printf " [%2d] 🗂️  %s\n" "$item_count" "$(basename "$item")"
+        fi
+    done < <(find "$current_dir" -mindepth 1 -maxdepth 1 \( -type d -o -type f -name "*.bin" \) -print0 | sort -z)
+    
+    if [ $item_count -eq 0 ]; then
+        echo " Nessun elemento disponibile in questa cartella"
+    fi
+    
+    echo "------------------------------------------------------"
+    echo "COMANDI SPECIALI:"
+    echo " [ 0] Torna indietro"
+    echo " [  ]"
+    echo " [99] Esci"
+    echo "======================================================"
+    
+    return $item_count
+}
+
+init_display() {
+    # Header fisso
+    tput clear
+    echo "======================================================"
+    echo "             NAVIGAZIONE SKYLANDERS"
+    echo "======================================================"
+    echo "------------------------------------------------------"
+}
+
+navigate() {
+    init_display
+    while true; do
+        local total_options=0
+        show_menu
+        total_options=$?
+        
+        read -p "Seleziona un numero (1-$total_options) o un comando speciale: " choice
+        
+        case $choice in
+            0)  # Torna indietro
+                if [ ${#history[@]} -gt 0 ]; then
+                    current_dir="${history[-1]}"
+                    unset 'history[${#history[@]}-1]'
+                    init_display
+                else
+                    echo "Sei già nella cartella principale!"
+                    sleep 1
+                fi
+                ;;
+            99) # Esci
+                exit 0
+                ;;
+            *)  # Navigazione normale
+                if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "$total_options" ]; then
+                    # Ottieni tutti gli elementi
+                    local options=()
+                    while IFS= read -r -d $'\0' item; do
+                        options+=("$item")
+                    done < <(find "$current_dir" -mindepth 1 -maxdepth 1 \( -type d -o -type f -name "*.bin" \) -print0 | sort -z)
+                    
+                    local selected_item="${options[$((choice - 1))]}"
+                    
+                    if [ -d "$selected_item" ]; then
+                        # Naviga nella cartella
+                        history+=("$current_dir")
+                        current_dir="$selected_item"
+                        init_display
+                    elif [ -f "$selected_item" ]; then
+                        # File selezionato
+                        local relative_path="${selected_item/#$base_dir\//}"
+                        # Usa un file temporaneo per restituire il percorso
+                        mkdir -p "./tmp"
+                        echo "$relative_path" > "./tmp/skylander_selection.txt"
+                        return 0
+                    fi
+                else
+                    echo "Selezione non valida!"
+                    sleep 1
+                    init_display
+                fi
+                ;;
+        esac
+    done
+}
+
+# Inizia la navigazione
+navigate
