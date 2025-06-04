@@ -95,151 +95,180 @@ else
 	
 fi
 
+while true; do
+	echo -e "${BLUE}Ricerca scanner...${NC}"
+	$PM3_PATH -c "hf" > /dev/null
 
-echo -e "${BLUE}Ricerca scanner...${NC}"
-$PM3_PATH -c "hf" > /dev/null
-
-if [[ $? != 0 ]]; then 
-	echo -e "${RED}Scanner non trovato!${NC}"
-	echo -e "${YELLOW}Collegare lo scanner e riprovare${NC}"
-	exitBatch
-else
-	echo -e "${GREEN}Scanner inizializzato correttamente!${NC}"
-fi
-
-uid=0
-
-while : ; do
-	echo -e "${BLUE}Scan in corso...${NC}"
-	uid=$($PM3_PATH -c "hf mf cgetblk --blk 0")
 	if [[ $? != 0 ]]; then 
-		echo -e "${RED}Tag non trovato o non valido!${NC}"
+		echo -e "${RED}Scanner non trovato!${NC}"
+		echo -e "${YELLOW}Collegare lo scanner e riprovare${NC}"
+		exitBatch
+	else
+		echo -e "${GREEN}Scanner inizializzato correttamente!${NC}"
+	fi
+
+	uid=0
+
+	while : ; do
+		echo -e "${BLUE}Scan in corso...${NC}"
+		uid=$($PM3_PATH -c "hf mf cgetblk --blk 0")
+		if [[ $? != 0 ]]; then 
+			echo -e "${RED}Tag non trovato o non valido!${NC}"
+			while true; do
+				read -p "Vuoi riprovare? (y/n): " yn
+				case $yn in
+					[Yy]* ) break;;
+					[Nn]* ) exitBatch;;
+					* ) echo -e "${RED}Rispondere con y o n${NC}";;
+				esac
+			done
+		else
+			echo -e "${GREEN}Tag trovato!${NC}"
+			break
+		fi
+	done
+
+	# Estrazione UID
+	bytes_raw=$(echo "$uid" | awk -F'|' '{print $2}')
+	uid=$(echo "$bytes_raw" | awk '{print $1$2$3$4}' | tr -d ' ')
+	uid=$(echo "$uid" | grep -oP '[0-9a-fA-F]{8}' | tr '[:upper:]' '[:lower:]')
+
+	skylanderNAME=""
+	skylanderNAME=$(find "./skylandersDataBase" -type f -not -path "*/Card Printouts/*" \
+	-regextype posix-egrep -regex ".*/[^/]*\\[${uid}\\].*\\.bin$" -print0 | \
+	xargs -0 -r basename -s .bin | \
+	head -n 1)
+
+	tagIsValid=true
+
+	if [ -n "$skylanderNAME" ]; then
+		skylanderNAME=$(basename "${skylanderNAME}" .bin)
+	fi
+
+	if [ -n "$skylanderNAME" ]; then
+		echo -e "${CYAN}Skylander rilevato: ${MAGENTA}${skylanderNAME}${NC}"
+	else
+		echo -e "${RED}Nessun Skylander trovato con UID '${uid}'!${NC}"
+		tagIsValid=false
+	fi
+
+	if [[ "$tagIsValid" == true ]]; then
+			
+		if [ -f "./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}.bin" ]; then 
+		
+			mv "./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}.bin" "./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}2.bin"
+			
+			echo -e "${BLUE}Lettura contenuto tag...${NC}"
+		
+			$PM3_PATH -c "hf mf csave -f \"./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}.bin\"" > /dev/null
+
+			if [[ $? != 0 ]]; then
+				echo -e "${RED}Backup in YOURSKYLANDERS fallito!${NC}"
+				mv "./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}2.bin" "./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}.bin"
+				if [[ $? != 0 ]]; then
+					echo -e "${RED}\tIL VECCHIO FILE DI BACKUP E' STATO DANNEGGIATO HAI PERSO TUTTI I TUOI PROGRESSI!${NC}"
+				else
+					echo -e "${YELLOW}VECCHIO FILE RIPRISTINATO CORRETTAMENTE${NC}"
+				fi
+				exitBatch
+			else
+				echo -e "${GREEN}Aggiornamento del tuo Skylander completato!${NC}"
+				if [ -f "./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}2.bin" ]; then
+					rm "./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}2.bin"
+					if [[ $? != 0 ]]; then
+						echo -e "${RED}Errore durante l'eliminazione del vecchio backup!${NC}"
+					fi
+				else
+					echo -e "${RED}IL FILE DI SICUREZZA DEL BACKUP NON E' STATO CREATO!\n\t${YELLOW}!RISOLVERE IMMEDIATAMENTE!\nADESSO NON E' SUCCESSO NULLA DI GRAVE MA CI SARANNO DEI BUG IN FUTURO${NC}"
+				fi
+			fi
+			
+		else
+			
+			echo -e "${BLUE}Lettura contenuto tag...${NC}"
+		
+			$PM3_PATH -c "hf mf csave -f \"./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}.bin\"" > /dev/null
+
+			if [[ $? != 0 ]]; then
+				echo -e "${RED}Backup in YOURSKYLANDERS fallito!${NC}"
+				exitBatch
+			else
+				echo -e "${GREEN}Aggiornamento del tuo Skylander completato!${NC}"
+			fi
+		fi
+
+		rm "./skylandersDataBase/7)_YOUR_SKYLANDERS/"*.json
+		
+	else
+		echo -e "${YELLOW}Backup skippato${NC}"
+	fi
+
+	### SELEZIONE NUOVO SKYLANDER ###
+	echo -e "${BLUE}SELEZIONE NUOVO SKYLANDER...${NC}"
+	sleep 2.5
+
+	rm -rf ./tmp 
+	/bin/bash ./skylander_navigator
+
+	if [ -f "./tmp/skylander_selection.txt" ]; then
+		selected_path=$(cat "./tmp/skylander_selection.txt")
+		filename=$(basename "$selected_path")
+		echo -e "${CYAN}Skylander selezionato: ${MAGENTA}$filename${NC}"
+		if [ ! -f "./skylandersDataBase/7)_YOUR_SKYLANDERS/$filename" ]; then
+			echo -e "${GREEN}Skylander nuovo! Aggiungo alla tua libreria...${NC}"
+			cp "./skylandersDataBase/${selected_path}" "./skylandersDataBase/7)_YOUR_SKYLANDERS/"
+		else 
+			echo -e "${CYAN}Skylander già presente in libreria${NC}"
+		fi
+	else
+		echo -e "${RED}Nessun Skylander selezionato!${NC}"
+		
+		exitVar=false
 		while true; do
-			read -p "Vuoi riprovare? (y/n): " yn
+			read -p "Te ne vai già? (y/N): " yn
 			case $yn in
-				[Yy]* ) break;;
-				[Nn]* ) exitBatch;;
-				* ) echo -e "${RED}Rispondere con y o n${NC}";;
+				[Yy]* ) exitVar=true && break;;
+				* ) break;;
 			esac
 		done
+
+		if [[ $exitVar == true ]];then
+			break
+		else
+			rm -rf ./tmp
+			continue
+		fi
+	fi
+	
+	rm -rf ./tmp
+
+	echo -e "${BLUE}Caricamento skylander sul TAG...${NC}"
+	$PM3_PATH -c "hf mf cload -f \"./skylandersDataBase/7)_YOUR_SKYLANDERS/${filename}\"" > /dev/null
+
+	if [[ $? == 0 ]]; then
+		echo -e "${GREEN}Scrittura avvenuta con successo!${NC}"
+		echo -e "${CYAN}___ TERMINE PROGRAMMA ___${NC}"
 	else
-		echo -e "${GREEN}Tag trovato!${NC}"
+		echo -e "${RED}SCRITTURA FALLITA!${NC}"
+		echo -e "${YELLOW}Per evitare bug cambiamo l'uid del tag...${NC}"
+		$PM3_PATH -c " hf mf csetuid -u 01020300" > /dev/null
+		exitBatch
+	fi
+
+	exitVar=false
+
+	while true; do
+		read -p "Te ne vai già? (y/N): " yn
+		case $yn in
+			[Yy]* ) exitVar=true && break;;
+			* ) break;;
+		esac
+	done
+
+	if [[ $exitVar == true ]];then
 		break
 	fi
-done
-
-# Estrazione UID
-bytes_raw=$(echo "$uid" | awk -F'|' '{print $2}')
-uid=$(echo "$bytes_raw" | awk '{print $1$2$3$4}' | tr -d ' ')
-uid=$(echo "$uid" | grep -oP '[0-9a-fA-F]{8}' | tr '[:upper:]' '[:lower:]')
-
-skylanderNAME=""
-skylanderNAME=$(find "./skylandersDataBase" -type f -not -path "*/Card Printouts/*" \
--regextype posix-egrep -regex ".*/[^/]*\\[${uid}\\].*\\.bin$" -print0 | \
-xargs -0 -r basename -s .bin | \
-head -n 1)
-
-tagIsValid=true
-
-if [ -n "$skylanderNAME" ]; then
-    skylanderNAME=$(basename "${skylanderNAME}" .bin)
-fi
-
-if [ -n "$skylanderNAME" ]; then
-    echo -e "${CYAN}Skylander rilevato: ${MAGENTA}${skylanderNAME}${NC}"
-else
-    echo -e "${RED}Nessun Skylander trovato con UID '${uid}'!${NC}"
-	tagIsValid=false
-fi
-
-if [[ "$tagIsValid" == true ]]; then
-		
-	if [ -f "./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}.bin" ]; then 
-	
-		mv "./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}.bin" "./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}2.bin"
-		
-		echo -e "${BLUE}Lettura contenuto tag...${NC}"
-	
-		$PM3_PATH -c "hf mf csave -f \"./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}.bin\"" > /dev/null
-
-		if [[ $? != 0 ]]; then
-			echo -e "${RED}Backup in YOURSKYLANDERS fallito!${NC}"
-			mv "./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}2.bin" "./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}.bin"
-			if [[ $? != 0 ]]; then
-				echo -e "${RED}\tIL VECCHIO FILE DI BACKUP E' STATO DANNEGGIATO HAI PERSO TUTTI I TUOI PROGRESSI!${NC}"
-			else
-				echo -e "${YELLOW}VECCHIO FILE RIPRISTINATO CORRETTAMENTE${NC}"
-			fi
-			exitBatch
-		else
-			echo -e "${GREEN}Aggiornamento del tuo Skylander completato!${NC}"
-			if [ -f "./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}2.bin" ]; then
-				rm "./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}2.bin"
-				if [[ $? != 0 ]]; then
-					echo -e "${RED}Errore durante l'eliminazione del vecchio backup!${NC}"
-				fi
-			else
-				echo -e "${RED}IL FILE DI SICUREZZA DEL BACKUP NON E' STATO CREATO!\n\t${YELLOW}!RISOLVERE IMMEDIATAMENTE!\nADESSO NON E' SUCCESSO NULLA DI GRAVE MA CI SARANNO DEI BUG IN FUTURO${NC}"
-			fi
-		fi
-		
-	else
-		
-		echo -e "${BLUE}Lettura contenuto tag...${NC}"
-	
-		$PM3_PATH -c "hf mf csave -f \"./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}.bin\"" > /dev/null
-
-		if [[ $? != 0 ]]; then
-			echo -e "${RED}Backup in YOURSKYLANDERS fallito!${NC}"
-			exitBatch
-		else
-			echo -e "${GREEN}Aggiornamento del tuo Skylander completato!${NC}"
-		fi
-	fi
-
-	rm "./skylandersDataBase/7)_YOUR_SKYLANDERS/"*.json
-	
-else
-	echo -e "${YELLOW}Backup skippato${NC}"
-fi
-
-### SELEZIONE NUOVO SKYLANDER ###
-echo -e "${BLUE}SELEZIONE NUOVO SKYLANDER...${NC}"
-sleep 2.5
-
-rm -rf ./tmp 
-/bin/bash ./skylander_navigator
-
-if [ -f "./tmp/skylander_selection.txt" ]; then
-    selected_path=$(cat "./tmp/skylander_selection.txt")
-	filename=$(basename "$selected_path")
-    echo -e "${CYAN}Skylander selezionato: ${MAGENTA}$filename${NC}"
-    if [ ! -f "./skylandersDataBase/7)_YOUR_SKYLANDERS/$filename" ]; then
-		echo -e "${GREEN}Skylander nuovo! Aggiungo alla tua libreria...${NC}"
-		cp "./skylandersDataBase/${selected_path}" "./skylandersDataBase/7)_YOUR_SKYLANDERS/"
-	else 
-		echo -e "${CYAN}Skylander già presente in libreria${NC}"
-	fi
-else
-    echo -e "${RED}Nessun Skylander selezionato!${NC}"
-	exitBatch
-fi
-rm -rf ./tmp
-
-echo -e "${BLUE}Caricamento skylander sul TAG...${NC}"
-$PM3_PATH -c "hf mf cload -f \"./skylandersDataBase/7)_YOUR_SKYLANDERS/${filename}\"" > /dev/null
-
-if [[ $? == 0 ]]; then
-	echo -e "${GREEN}Scrittura avvenuta con successo!${NC}"
-	echo -e "${CYAN}___ TERMINE PROGRAMMA ___${NC}"
-	exitBatch
-else
-	echo -e "${RED}SCRITTURA FALLITA!${NC}"
-	echo -e "${YELLOW}Per evitare bug cambiamo l'uid del tag...${NC}"
-	$PM3_PATH -c " hf mf csetuid -u 01020300" > /dev/null
-	exitBatch
-fi
-
+done 
 exitBatch
 
 
