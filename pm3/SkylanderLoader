@@ -40,10 +40,6 @@
 PM3_PATH=""
 UART_PORT=""
 
-
-clear
-
-
 # Definizione dei colori
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -53,19 +49,20 @@ MAGENTA='\033[0;35m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-# Titolo ASCII art
-echo -e "${CYAN}"
-echo "         .▄▄ · ▄▄▌      ▄▄▌         ▄▄▄· ·▄▄▄▄  ▄▄▄ .▄▄▄  "
-echo "         ▐█ ▀. ██•      ██•  ▪     ▐█ ▀█ ██▪ ██ ▀▄.▀·▀▄ █·"
-echo "         ▄▀▀▀█▄██▪      ██▪   ▄█▀▄ ▄█▀▀█ ▐█· ▐█▌▐▀▀▪▄▐▀▀▄ "
-echo "         ▐█▄▪▐█▐█▌▐▌    ▐█▌▐▌▐█▌.▐▌▐█ ▪▐▌██. ██ ▐█▄▄▌▐█•█▌"
-echo "          ▀▀▀▀ .▀▀▀     .▀▀▀  ▀█▄▀▪ ▀  ▀ ▀▀▀▀▀•  ▀▀▀ .▀  ▀"
-                                                      
-echo -e "   ${YELLOW}==========================================================${NC}"
-echo -e "   ${GREEN}                Skylander NFC Manager - v2.0${NC}"
-echo -e "   ${YELLOW}==========================================================${NC}"
-echo
-
+printTitle() {
+	# Titolo ASCII art
+	echo -e "${CYAN}"
+	echo "         .▄▄ · ▄▄▌      ▄▄▌         ▄▄▄· ·▄▄▄▄  ▄▄▄ .▄▄▄  "
+	echo "         ▐█ ▀. ██•      ██•  ▪     ▐█ ▀█ ██▪ ██ ▀▄.▀·▀▄ █·"
+	echo "         ▄▀▀▀█▄██▪      ██▪   ▄█▀▄ ▄█▀▀█ ▐█· ▐█▌▐▀▀▪▄▐▀▀▄ "
+	echo "         ▐█▄▪▐█▐█▌▐▌    ▐█▌▐▌▐█▌.▐▌▐█ ▪▐▌██. ██ ▐█▄▄▌▐█•█▌"
+	echo "          ▀▀▀▀ .▀▀▀     .▀▀▀  ▀█▄▀▪ ▀  ▀ ▀▀▀▀▀•  ▀▀▀ .▀  ▀"
+														  
+	echo -e "   ${YELLOW}==========================================================${NC}"
+	echo -e "   ${GREEN}                Skylander NFC Manager - v2.0${NC}"
+	echo -e "   ${YELLOW}==========================================================${NC}"
+	echo
+}
 exitBatch() {
 	echo -e "${YELLOW}Premi INVIO per uscire...${NC}"
 	read
@@ -75,6 +72,11 @@ exitBatch() {
 findUSBport() {
 	UART_PORT=$(./proxmark3/pm3 -c "hf" | grep -oP '\[\+\] Using UART port \K\w+')
 }
+
+clear
+
+printTitle
+
 
 termuxChecker=$(echo $PREFIX | grep -o "com.termux")
 
@@ -236,6 +238,8 @@ while true; do
 			break
 		else
 			rm -rf ./tmp
+			clear
+			printTitle
 			continue
 		fi
 	fi
@@ -267,6 +271,9 @@ while true; do
 
 	if [[ $exitVar == true ]];then
 		break
+	else
+		clear
+		printTitle
 	fi
 done 
 exitBatch
