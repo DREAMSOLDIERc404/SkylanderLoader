@@ -37,11 +37,12 @@
 #    fi
 #}
 
+PM3_PATH="./proxmark3/pm3 -p tcp:localhost:1234"
 
 clear
 
 echo "Ricerca scanner"
-./proxmark3/pm3 -c "hf" > /dev/null
+$PM3_PATH -c "hf" > /dev/null
 
 if [[ $? != 0 ]]; then 
 	echo "Scanner non trovato"
@@ -54,7 +55,7 @@ uid=0
 
 while : ; do
 	echo "Scan in corso"
-	uid=$(./proxmark3/pm3 -c "hf mf cgetblk --blk 0")
+	uid=$($PM3_PATH -c "hf mf cgetblk --blk 0")
 	if [[ $? != 0 ]]; then 
 		echo "Tag non trovato o non valido"
 		while true; do
@@ -116,7 +117,7 @@ if [[ "$tagIsValid" == true ]]; then
 	fi
 
 	echo "Lettura contenuto tag!"
-	./proxmark3/pm3 -c "hf mf csave -f \"./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}.bin\"" > /dev/null
+	$PM3_PATH -c "hf mf csave -f \"./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}.bin\"" > /dev/null
 
 	if [[ $? != 0 ]]; then
 		echo "Backup in YOURSKYLANDERS fallito!"
@@ -136,7 +137,7 @@ sleep 2.5
 #Togliamo ogni possibile errore di selezione andando a eliminare la cartella che contiene il nuovo sklndr selezionato
 rm -rf ./tmp 
 # Esegui il navigator in modalità interattiva
-./skylander_navigator
+/bin/bash ./skylander_navigator
 
 # Verifica se è stata fatta una selezione
 if [ -f "./tmp/skylander_selection.txt" ]; then
@@ -156,7 +157,7 @@ fi
 rm -rf ./tmp
 
 echo "Caricando lo skylander sul TAG"
-./proxmark3/pm3 -c "hf mf cload -f \"./skylandersDataBase/7)_YOUR_SKYLANDERS/${filename}\"" > /dev/null
+$PM3_PATH -c "hf mf cload -f \"./skylandersDataBase/7)_YOUR_SKYLANDERS/${filename}\"" > /dev/null
 
 if [[ $? == 0 ]]; then
 	echo "Scrittura avvenuta con successo!"
@@ -165,7 +166,7 @@ if [[ $? == 0 ]]; then
 else
 	echo "SCRITTURA FALLITA! ERRORE!"
 	echo "Per evitare bug cambiamo l'uid del tag!"
-	./proxmark3/pm3 -c " hf mf csetuid -u 01020300"
+	$PM3_PATH -c " hf mf csetuid -u 01020300"
 	exit
 fi
 
