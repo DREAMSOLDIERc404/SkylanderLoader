@@ -1,6 +1,7 @@
 msys2/*
 !msys2/.msys2-environment
 pm3/.proxmark3/
+pm3/.bash_history
 pm3/proxmark3/*
 !pm3/proxmark3/.clone-your-repo-her
 pm3/skylandersDataBase/*

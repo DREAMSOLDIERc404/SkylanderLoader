@@ -37,16 +37,29 @@
 #    fi
 #}
 
-PM3_PATH="./proxmark3/pm3 -p tcp:localhost:1234"
-
 clear
+
+exitBatch() {
+	read -p "Programma terminato premi un tasto per uscire..."
+	exit
+}
+
+PM3_PATH=""
+
+termuxChecker=$(echo $PREFIX | grep -o "com.termux")
+
+if [ ! -n termuxChecker ];then
+	PM3_PATH="./proxmark3/pm3 -p tcp:localhost:1234"
+else
+	PM3_PATH="./proxmark3/pm3"
+fi
 
 echo "Ricerca scanner"
 $PM3_PATH -c "hf" > /dev/null
 
 if [[ $? != 0 ]]; then 
 	echo "Scanner non trovato"
-	exit
+	exitBatch
 else
 	echo "Scanner inizializzato!"
 fi
@@ -62,7 +75,7 @@ while : ; do
 			read -p "Vuoi riprovare?(y/n): " yn
 			case $yn in
 				[Yy]* ) break;;
-				[Nn]* ) exit;;
+				[Nn]* ) exitBatch;;
 				* ) echo "Please answer yes or no.";;
 			esac
 		done
@@ -112,7 +125,7 @@ if [[ "$tagIsValid" == true ]]; then
 		# Controlla se l'eliminazione è avvenuta con successo
 		if [[ $? != 0 ]]; then
 			echo "Errore durante l'eliminazione del vecchio backup"
-			exit
+			exitBatch
 		fi
 	fi
 
@@ -121,12 +134,12 @@ if [[ "$tagIsValid" == true ]]; then
 
 	if [[ $? != 0 ]]; then
 		echo "Backup in YOURSKYLANDERS fallito!"
-		exit
+		exitBatch
 	else
 		echo "Aggiornamento del tuo Skylander Eseguito"
 	fi
 
-	rm "./skylandersDataBase/7)_YOUR_SKYLANDERS/"*.json
+	rm -f "./skylandersDataBase/7)_YOUR_SKYLANDERS/"*.json
 else
 	echo "Backup skippato"
 fi
@@ -152,7 +165,7 @@ if [ -f "./tmp/skylander_selection.txt" ]; then
 	fi
 else
     echo "Nessun Skylander selezionato."
-	exit
+	exitBatch
 fi
 rm -rf ./tmp
 
@@ -162,13 +175,13 @@ $PM3_PATH -c "hf mf cload -f \"./skylandersDataBase/7)_YOUR_SKYLANDERS/${filenam
 if [[ $? == 0 ]]; then
 	echo "Scrittura avvenuta con successo!"
 	echo "___TERMINE PROGRAMMA___"
-	exit
+	exitBatch
 else
 	echo "SCRITTURA FALLITA! ERRORE!"
 	echo "Per evitare bug cambiamo l'uid del tag!"
 	$PM3_PATH -c " hf mf csetuid -u 01020300"
-	exit
+	exitBatch
 fi
 
-exit
+exitBatch
 
