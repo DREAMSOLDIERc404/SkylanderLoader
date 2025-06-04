@@ -1,8 +1,7 @@
-# ignore the __pycache__ folder and all its contents
-msys2/
+msys2/*
 !msys2/.msys2-environment
 pm3/.proxmark3/
-pm3/proxmark3/
+pm3/proxmark3/*
 !pm3/proxmark3/.clone-e-build-your-pm3-branch
-pm3/skylandersDataBase/
+pm3/skylandersDataBase/*
 !pm3/skylandersDataBase/.put-here-your-bin-SL-skylandersDataBase
