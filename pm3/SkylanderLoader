@@ -236,7 +236,7 @@ if [[ $? == 0 ]]; then
 else
 	echo -e "${RED}SCRITTURA FALLITA!${NC}"
 	echo -e "${YELLOW}Per evitare bug cambiamo l'uid del tag...${NC}"
-	$PM3_PATH -c " hf mf csetuid -u 01020300"
+	$PM3_PATH -c " hf mf csetuid -u 01020300" > /dev/null
 	exitBatch
 fi
 
