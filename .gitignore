@@ -6,3 +6,4 @@ pm3/proxmark3/*
 !pm3/proxmark3/.clone-your-repo-her
 pm3/skylandersDataBase/*
 !pm3/skylandersDataBase/.add_your_database_here
+GIT_TOKEN
