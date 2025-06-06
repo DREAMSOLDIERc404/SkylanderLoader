@@ -39,6 +39,7 @@
 
 PM3_PATH=""
 UART_PORT=""
+BASH_PATH=""
 
 # Definizione dei colori
 RED='\033[0;31m'
@@ -83,7 +84,8 @@ termuxChecker=$(echo $PREFIX | grep -o "com.termux")
 
 if [[ $termuxChecker == "com.termux" ]];then
 	echo -e "${BLUE}Porta TCP localhost:1234 selezionata${NC}"
-	PM3_PATH="./proxmark3/pm3 -p tcp:localhost:1234"
+	BASH_PATH="/data/data/com.termux/files/usr/bin/bash"
+	PM3_PATH="${BASH_PATH} ./proxmark3/pm3 -p tcp:localhost:1234"
 else
 	echo -e "${BLUE}Ricerca porta UART...${NC}"
 	findUSBport
@@ -92,7 +94,8 @@ else
 		exitBatch
 	else
 		echo -e "Porta uart: ${GREEN}${UART_PORT}${NC}"
-		PM3_PATH="./proxmark3/pm3 -p $UART_PORT"
+		BASH_PATH="/bin/bash"
+		PM3_PATH="${BASH_PATH} ./proxmark3/pm3 -p $UART_PORT"
 	fi
 	
 fi
@@ -162,7 +165,7 @@ while true; do
 			
 			echo -e "${BLUE}Lettura contenuto tag...${NC}"
 		
-			$PM3_PATH -c "hf mf csave -f \"./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}.bin\"" > /dev/null
+			$PM3_PATH -c "hf mf csave -f \"./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}.bin\"" 
 
 			if [[ $? != 0 ]]; then
 				echo -e "${RED}Backup in YOURSKYLANDERS fallito!${NC}"
@@ -189,7 +192,7 @@ while true; do
 			
 			echo -e "${BLUE}Lettura contenuto tag...${NC}"
 		
-			$PM3_PATH -c "hf mf csave -f \"./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}.bin\"" > /dev/null
+			$PM3_PATH -c "hf mf csave -f \"./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}.bin\"" 
 
 			if [[ $? != 0 ]]; then
 				echo -e "${RED}Backup in YOURSKYLANDERS fallito!${NC}"
@@ -210,7 +213,7 @@ while true; do
 	sleep 2.5
 
 	rm -rf ./tmp 
-	/bin/bash ./skylander_navigator
+	$BASH_PATH ./skylander_navigator
 
 	if [ -f "./tmp/skylander_selection.txt" ]; then
 		selected_path=$(cat "./tmp/skylander_selection.txt")
