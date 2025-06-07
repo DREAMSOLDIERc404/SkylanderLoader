@@ -165,7 +165,7 @@ while true; do
 			
 			echo -e "${BLUE}Lettura contenuto tag...${NC}"
 		
-			$PM3_PATH -c "hf mf csave -f \"./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}.bin\"" 
+			$PM3_PATH -c "hf mf csave -f \"`pwd`/skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}.bin\"" > /dev/null 
 
 			if [[ $? != 0 ]]; then
 				echo -e "${RED}Backup in YOURSKYLANDERS fallito!${NC}"
@@ -192,7 +192,7 @@ while true; do
 			
 			echo -e "${BLUE}Lettura contenuto tag...${NC}"
 		
-			$PM3_PATH -c "hf mf csave -f \"./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}.bin\"" 
+			$PM3_PATH -c "hf mf csave -f \"`pwd`/skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}.bin\"" > /dev/null 
 
 			if [[ $? != 0 ]]; then
 				echo -e "${RED}Backup in YOURSKYLANDERS fallito!${NC}"
