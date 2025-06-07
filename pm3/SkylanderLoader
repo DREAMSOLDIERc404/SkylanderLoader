@@ -164,9 +164,13 @@ while true; do
 			mv "./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}.bin" "./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}2.bin"
 			
 			echo -e "${BLUE}Lettura contenuto tag...${NC}"
-		
-			$PM3_PATH -c "hf mf csave -f \"`pwd`/skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}.bin\"" > /dev/null 
-
+			
+			if [[ $termuxChecker == "com.termux" ]];then
+				$PM3_PATH -c "hf mf csave -f \"`pwd`/skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}.bin\"" > /dev/null 
+			else
+				$PM3_PATH -c "hf mf csave -f \"./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}.bin\"" > /dev/null 
+			fi
+			
 			if [[ $? != 0 ]]; then
 				echo -e "${RED}Backup in YOURSKYLANDERS fallito!${NC}"
 				mv "./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}2.bin" "./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}.bin"
@@ -191,8 +195,12 @@ while true; do
 		else
 			
 			echo -e "${BLUE}Lettura contenuto tag...${NC}"
-		
-			$PM3_PATH -c "hf mf csave -f \"`pwd`/skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}.bin\"" > /dev/null 
+			
+			if [[ $termuxChecker == "com.termux" ]];then
+				$PM3_PATH -c "hf mf csave -f \"`pwd`/skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}.bin\"" > /dev/null 
+			else
+				$PM3_PATH -c "hf mf csave -f \"./skylandersDataBase/7)_YOUR_SKYLANDERS/${skylanderNAME}.bin\"" > /dev/null 
+			fi
 
 			if [[ $? != 0 ]]; then
 				echo -e "${RED}Backup in YOURSKYLANDERS fallito!${NC}"
@@ -250,8 +258,13 @@ while true; do
 	rm -rf ./tmp
 
 	echo -e "${BLUE}Caricamento skylander sul TAG...${NC}"
-	$PM3_PATH -c "hf mf cload -f \"./skylandersDataBase/7)_YOUR_SKYLANDERS/${filename}\"" > /dev/null
-
+	
+	if [[ $termuxChecker == "com.termux" ]];then
+		$PM3_PATH -c "hf mf cload -f \"`pwd`/skylandersDataBase/7)_YOUR_SKYLANDERS/${filename}\"" > /dev/null
+	else
+		$PM3_PATH -c "hf mf cload -f \"./skylandersDataBase/7)_YOUR_SKYLANDERS/${filename}\"" > /dev/null
+	fi
+	
 	if [[ $? == 0 ]]; then
 		echo -e "${GREEN}Scrittura avvenuta con successo!${NC}"
 		echo -e "${CYAN}___ TERMINE PROGRAMMA ___${NC}"
